@@ -6,7 +6,7 @@ const AWS = require('aws-sdk')
 const s3 = new AWS.S3({apiVersion: '2006-03-01'});
 const chromium = require('chrome-aws-lambda');
 
-const pageURL = process.env.TARGET_URL
+const pageURL = 'https://www.nytimes.com/games/wordle/index.html';
 const agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
 
 exports.handler = async (event, context) => {
@@ -29,21 +29,15 @@ exports.handler = async (event, context) => {
     console.log('Navigating to page: ', pageURL)
 
     await page.goto(pageURL)
-    const buffer = await page.screenshot()
-    result = await page.title()
 
-    // upload the image using the current timestamp as filename
-    const s3result = await s3
-      .upload({
-        Bucket: process.env.S3_BUCKET,
-        Key: `${Date.now()}.png`,
-        Body: buffer,
-        ContentType: 'image/png',
-        ACL: 'public-read'
-      })
-      .promise()
-      
-    console.log('S3 image URL:', s3result.Location)
+    await page.keyboard.type('irate');
+    await page.keyboard.press('Enter');
+    
+    const rowStates = Array.from(
+      document.querySelector('game-app').shadowRoot.querySelector('game-row').shadowRoot.querySelectorAll('game-tile')
+    ).map(({ _state }) => _state);
+    
+    console.log('Feedback on IRATE:', rowStates);
     
     await page.close();
     await browser.close();
